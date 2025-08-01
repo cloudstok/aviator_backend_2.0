@@ -1,5 +1,5 @@
 {
-  "name": "avaitor_backend_2.0",
+  "name": "air_jet_backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -30,16 +30,9 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/cloudstok/avaitor_backend_2.0.git"
-  },
+  "description": "",
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/cloudstok/avaitor_backend_2.0/issues"
-  },
-  "homepage": "https://github.com/cloudstok/avaitor_backend_2.0#readme",
-  "description": ""
+  "type": "commonjs"
 }

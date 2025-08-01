@@ -2,13 +2,22 @@ import { Server } from "socket.io";
 import { settleBet, settleCallBacks, setCurrentLobby, getCurrentLobby } from "../bets/bets-session";
 import { getPlayerCount } from "../players/player-event";
 import { insertLobbies } from "./lobbies-db";
-import {createLogger} from "../../utilities/logger";
+import { createLogger } from "../../utilities/logger";
 import { read } from "../../utilities/db-connection";
 import { GeneratedOdds, LobbyData, LobbyHistory, OddsData } from "../../types";
 const logger = createLogger('Plane', 'jsonl');
 const planeErrorLogger = createLogger('PlaneError', 'plain');
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+let lobbiesMult: string[] | undefined = [];
+let betCount: number = 0;
+
+export function getLobbiesMult() { return lobbiesMult };
+export function getBetCount() { return betCount };
+function getRandomBetCount() {
+    betCount = Math.floor(Math.random() * (3000 - 600 + 1)) + 600;
+    return betCount
+}
 
 const checkPlaneHealth = (): NodeJS.Timeout => setInterval(() => {
     const { lobbyId, status } = getCurrentLobby() as LobbyData;
@@ -34,6 +43,7 @@ export const initPlane = async (io: Server): Promise<void> => {
     logger.info("lobby started");
     initLobby(io);
     checkPlaneHealth();
+    lobbiesMult = await getMaxMultOdds();
 };
 
 let odds: OddsData = {};
@@ -43,7 +53,8 @@ const initLobby = async (io: Server): Promise<void> => {
     let recurLobbyData: LobbyData = { lobbyId, status: 0, isWebhook: 0 };
     setCurrentLobby(recurLobbyData);
 
-    await getMaxMultOdds(io);
+    io.emit('betCount', getRandomBetCount());
+    io.emit('maxOdds', lobbiesMult);
     odds.lobbyId = lobbyId;
     odds.start_time = Date.now();
 
@@ -52,9 +63,7 @@ const initLobby = async (io: Server): Promise<void> => {
     const end_delay = 6;
 
     odds.total_players = await getPlayerCount();
-    // const max_mult = generateOdds().mult;
-    const max_mult = 5;
-
+    const max_mult = generateOdds().mult;
 
     for (let x = 0; x < start_delay; x++) {
         io.emit("plane", `${lobbyId}:${inc}:0`);
@@ -62,8 +71,9 @@ const initLobby = async (io: Server): Promise<void> => {
         await sleep(1000);
     }
 
+    io.emit("plane", `${lobbyId}:PROCESSING:0`);
     recurLobbyData.max_mult = max_mult;
-    recurLobbyData.isWebhookData = 1;
+    recurLobbyData.isWebhook = 1;
     setCurrentLobby(recurLobbyData);
 
     await settleCallBacks(io);
@@ -116,16 +126,19 @@ const initLobby = async (io: Server): Promise<void> => {
     };
 
     io.emit("history", JSON.stringify(history));
+    if (lobbiesMult && lobbiesMult?.length >= 30) lobbiesMult?.pop();
+    if (lobbiesMult) lobbiesMult = [Number(history.max_mult).toFixed(2), ...lobbiesMult];
     logger.info(JSON.stringify(history));
     await insertLobbies(history);
 
     return initLobby(io);
 };
 
-export const getMaxMultOdds = async (io: Server): Promise<void> => {
+export const getMaxMultOdds = async (): Promise<string[] | undefined> => {
     try {
-        const odds = await read('SELECT lobby_id, max_mult, created_at from lobbies order by created_at desc limit 30');
-        io.emit('maxOdds', odds);
+        const odds = await read('SELECT max_mult from lobbies order by created_at desc limit 30');
+        const oddsData = odds.map(e => e.max_mult);
+        return oddsData;
     } catch (err) {
         console.error(err);
     }

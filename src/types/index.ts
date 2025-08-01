@@ -5,7 +5,6 @@ export type LobbyData = {
     status: number;
     isWebhook?: number;
     max_mult?: number;
-    isWebhookData?: number;
     ongoingMaxMult?: string;
 };
 
@@ -29,7 +28,7 @@ export type EventType = 'bet' | 'cancelledBet' | 'cashout' | 'settlement';
 export type BetResponse = string | Record<string, unknown>;
 export type CleanedData = CleanedBet | CleanedCashout;
 export type BetMessageArgs = [...number[]];
-export type CashoutMessageArgs = [number, number, ...string[]];
+export type CashoutMessageArgs = [number, number, number, ...string[]];
 export type CancelBetMessageArgs = [...string[]];
 export type GeneratedOdds = {
     win_per: number;

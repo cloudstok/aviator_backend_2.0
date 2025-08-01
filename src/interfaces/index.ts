@@ -189,7 +189,8 @@ export interface Settlement extends Bet {
 
 export interface LobbyData {
     lobbyId: number;
-    status: number; 
+    status: number;
+    isWebhook?: number;
     ongoingMaxMult?: string | number;
     max_mult?: string | number;
 }

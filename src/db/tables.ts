@@ -53,7 +53,7 @@ export const roundStats = ` CREATE TABLE IF NOT EXISTS round_stats (
    created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP
  );`
 
-export const user_messages = `CREATE TABLE user_messages (
+ export const user_messages = `CREATE TABLE user_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     operator_id varchar(255) DEFAULT NULL,

@@ -172,7 +172,7 @@ function cleanData(betObj: Bet | Settlement, event: 'bet' | 'cashout'): CleanedD
     if (event === 'bet') {
         const cleanedBet: CleanedBet = {
             ...clearBetObj,
-            name: betObj.name ? betObj.name[0] + '***' + betObj.name[betObj.name.length - 1] : 'N***A',
+            name: betObj.name,
             image: betObj.image,
         };
         return cleanedBet;
@@ -264,7 +264,7 @@ const handleFulfilledResult = async (value: FulfilledBetResult, io: Server): Pro
             await insertBets(value);
         } else {
             io.to(socket_id).emit("bet", { bet_id: bet_id, action: "cancel" });
-            io.to(socket_id).emit("betError", `Bet ${bet_id} cancelled by upstream (status: ${status})`);
+            io.to(socket_id).emit("betError", `Bet Cancelled By Upstream ${bet_id}`);
             await removeBetObjAndEmit(bet_id, betParts[2], socket_id, io);
         }
     } catch (err) {
@@ -362,11 +362,10 @@ let cashOutBetsThisRound: Set<string> = new Set();
 export const cashOut = async (
     io: Server,
     socket: Socket,
-    [max_mult, atCo, ...betIdParts]: CashoutMessageArgs,
-    isAutoCashout: boolean = true
+    [max_mult, atCo, isAutoCashout, ...betIdParts]: CashoutMessageArgs
 ): Promise<void> => {
 
-    max_mult = Number(max_mult); atCo = Number(atCo);
+    max_mult = Number(max_mult); atCo = Number(atCo), isAutoCashout = Number(isAutoCashout);
     const betId = betIdParts.join(':');
     const CashObj = { max_mult, atCo, betId, isAutoCashout, socket_id: socket.id };
 
@@ -401,7 +400,7 @@ export const cashOut = async (
 
 
         let effective_max_mult: number;
-        if ((betObj.atCo) && atCo && betObj.atCo === atCo && atCo <= Number(lobbyData.ongoingMaxMult || Infinity)) {
+        if ((betObj.atCo) && atCo && betObj.atCo === atCo && atCo <= Number(lobbyData.ongoingMaxMult)) {
             effective_max_mult = betObj.atCo;
         } else {
             effective_max_mult = max_mult;
@@ -410,12 +409,10 @@ export const cashOut = async (
         betObj.atCo = !atCo ? 0 : atCo;
 
 
-        if (effective_max_mult > Number(lobbyData.ongoingMaxMult || Infinity) || isNaN(Number(lobbyData.ongoingMaxMult))) {
+        if (effective_max_mult > Number(lobbyData.ongoingMaxMult) || isNaN(Number(lobbyData.ongoingMaxMult))) {
             if (isAutoCashout) {
                 return logEventAndEmitResponse(socket, CashObj, `Cheat: Invalid Cashout Multiplier. Current: ${lobbyData.ongoingMaxMult}, Received: ${effective_max_mult}`, 'cashout');
             }
-
-            effective_max_mult = Number(lobbyData.ongoingMaxMult);
         }
 
 
@@ -482,7 +479,7 @@ export const settleBet = async (io: Server, data: RoundData): Promise<void> => {
 
                     const socketForBet = io.sockets.sockets.get(betObj.socket_id);
                     if (socketForBet) {
-                        await cashOut(io, socketForBet, [betObj.atCo, betObj.atCo, b_prefix, lobby_id_from_bet, bet_amount_str, user_id, operator_id, identifier], false);
+                        await cashOut(io, socketForBet, [betObj.atCo, betObj.atCo, 0, b_prefix, lobby_id_from_bet, bet_amount_str, user_id, operator_id, identifier]);
                         return;
                     } else {
                         settlBetLogger.warn(JSON.stringify({ req: betObj, res: `Socket not found for auto-cashout during settleBet: ${betObj.socket_id}` }));
@@ -561,18 +558,22 @@ export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
                 let cashoutMultiplier = Number(lobbyData.ongoingMaxMult);
                 if (bet.atCo && bet.atCo < Number(lobbyData.ongoingMaxMult)) {
                     cashoutMultiplier = bet.atCo;
-                }
+                };
                 const [b_prefix, lobby_id_from_bet, bet_amount_str, user_id, operator_id, identifier] = bet.bet_id.split(":");
-                await cashOut(io, socket, [bet.atCo, cashoutMultiplier, b_prefix, lobby_id_from_bet, bet_amount_str, user_id, operator_id, identifier], false);
+                await cashOut(io, socket, [cashoutMultiplier, bet.atCo, 1, b_prefix, lobby_id_from_bet, bet_amount_str, user_id, operator_id, identifier]);
             }));
-        } else if (lobbyData.status === 0) {
+        } else if (lobbyData.status === 0 && !lobbyData.isWebhook) {
             const betsToCancelOnDisconnect = userActiveBets.map(b => b.bet_id);
             bets = bets.filter(bet => bet.socket_id !== socket.id);
             logger.info(`Bets cancelled due to disconnect during betting phase for socket ${socket.id}: ${betsToCancelOnDisconnect.join(', ')}`);
+        } else if (lobbyData.status == 0 && lobbyData.isWebhook) {
+            await Promise.all(userActiveBets.map(async bet => {
+                setTimeout(async() => await cashOut(io, socket, [1.00, bet.atCo, 0, ...bet.bet_id.split(':')]), 100);
+            }));
         }
     };
     reducePlayerCount();
-    await deleteCache(`PL:${socket.id}`);
+    setTimeout(async() => await deleteCache(`PL:${socket.id}`), 200);
 };
 
 export const getCurrentLobby = (): LobbyData => lobbyData;
