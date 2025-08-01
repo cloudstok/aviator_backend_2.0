@@ -4,7 +4,8 @@ export const lobbies = `CREATE TABLE IF NOT EXISTS lobbies (
    start_delay INT NOT NULL,
    end_delay INT NOT NULL,
    max_mult DECIMAL(10, 2) NOT NULL,
-   created_at datetime DEFAULT CURRENT_TIMESTAMP
+   created_at datetime DEFAULT CURRENT_TIMESTAMP,
+   index idx_lobby (lobby_id)
  );`
 
 export const bets = `CREATE TABLE IF NOT EXISTS bets (
@@ -34,7 +35,9 @@ export const settlement = `CREATE TABLE IF NOT EXISTS settlement (
    max_mult DECIMAL(10, 2) NOT NULL default 0.00,
    win_amount decimal(10, 2) NOT NULL default 0.00,
    status enum('cashout', 'crashed') DEFAULT 'crashed',
-   created_at datetime DEFAULT CURRENT_TIMESTAMP
+   created_at datetime DEFAULT CURRENT_TIMESTAMP,
+   index idx_user_operator (user_id, operator_id),
+   index idx_user_operator_lobby (user_id, operator_id, lobby_id)
 );`
 
 export const roundStats = ` CREATE TABLE IF NOT EXISTS round_stats (
@@ -50,10 +53,11 @@ export const roundStats = ` CREATE TABLE IF NOT EXISTS round_stats (
    biggest_winner decimal(10, 2) DEFAULT 0.00,
    biggest_looser decimal(10, 2) DEFAULT 0.00,
    total_round_settled decimal(10, 2) DEFAULT 0.00,
-   created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP
+   created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+   index idx_lobby (lobby_id)
  );`
 
- export const user_messages = `CREATE TABLE user_messages (
+export const user_messages = `CREATE TABLE user_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     operator_id varchar(255) DEFAULT NULL,
