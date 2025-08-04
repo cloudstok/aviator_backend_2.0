@@ -1,8 +1,15 @@
+export interface LobbiesMult {
+    lobbyId: number;
+    max_mult: number | string;
+    created_at: string;
+    client_seeds: Record<string, string>;
+}
+
 export interface GameResult {
-  jkr: string;
-  andr: string[];
-  bahar: string[];
-  winner: null | 1 | 2;
+    jkr: string;
+    andr: string[];
+    bahar: string[];
+    winner: null | 1 | 2;
 }
 
 export type BetResult = {
@@ -106,49 +113,52 @@ export type Suit = 'H' | 'D' | 'C' | 'S';
 export type Value = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 
 export interface Card {
-  value: Value;
-  suit: Suit;
+    value: Value;
+    suit: Suit;
 }
 
 
 //==========New Interfaces
 
 export interface CashoutData {
-  name: string;
-  image: number;
-  max_mult?: string;
-  bet_id: string;
-  atCo: number;
-  final_amount?: string;
+    name: string;
+    image: number;
+    max_mult?: string;
+    bet_id: string;
+    atCo: number;
+    hash: string;
+    final_amount?: string;
 };
 
 export interface SettlementData {
-  bet_id: string;
-  name: string;
-  image: number;
-  max_mult?: string;
-  atCo: number;
+    bet_id: string;
+    name: string;
+    image: number;
+    max_mult?: string;
+    atCo: number;
+    hash: string;
 };
 
 export interface RoundStats {
-  lobbyId?: number;
-  start_time?: number;
-  total_players?: number;
-  max_mult?: number;
-  end_time?: number;
-  total_bets: number;
-  total_bet_amount: number;
-  total_cashout_amount: number;
-  biggest_winner?: number;
-  biggest_looser?: number;
-  total_round_settled: number;
+    lobbyId?: number;
+    start_time?: number;
+    total_players?: number;
+    max_mult?: number;
+    end_time?: number;
+    total_bets: number;
+    total_bet_amount: number;
+    total_cashout_amount: number;
+    biggest_winner?: number;
+    biggest_looser?: number;
+    total_round_settled: number;
 };
 
 export interface InsertBetData {
-  bet_id: string;
-  name: string;
-  image: number;
-  atCo?: number;
+    bet_id: string;
+    name: string;
+    image: number;
+    atCo?: number;
+    hash: string;
 };
 
 export interface UserData {
@@ -166,17 +176,18 @@ export interface Bet {
     balance: number;
     name: string;
     image: number;
-    token: string; 
+    token: string;
     atCo: number;
+    hash: string;
     socket_id: string;
     game_id: string;
     webhookData?: WebhookPreparedData;
-    bet_amount?: string | number; 
-    lobby_id?: number; 
+    bet_amount?: string | number;
+    lobby_id?: number;
     user_id: string;
-    operator_id: string; 
-    max_mult?: string; 
-    plane_status?: 'cashout' | 'crashed' | string; 
+    operator_id: string;
+    max_mult?: string;
+    plane_status?: 'cashout' | 'crashed' | string;
     final_amount?: string;
     amount?: string;
 }
@@ -229,7 +240,7 @@ export interface CleanedCashout extends CleanedBetBase {
     final_amount: string;
 };
 
-export interface RoundData { 
+export interface RoundData {
     lobbyId?: number | undefined;
     max_mult?: number;
 }
@@ -252,10 +263,11 @@ export interface BetRoundStats extends RoundData, RoundStatsReduced {
 
 export interface FulfilledBetResult {
     socket_id: string;
-    status: number; 
+    status: number;
     bet_id: string;
     name: string;
     image: number;
+    hash: string;
     [key: string]: any;
 };
 
@@ -281,6 +293,9 @@ export interface LobbyInsertData {
     start_delay: number;
     end_delay: number;
     max_mult: number;
+    serverSeed: string;
+    hashedSeed: string;
+    client_seeds: Record<string, string>;
 };
 
 export interface DBConfig {

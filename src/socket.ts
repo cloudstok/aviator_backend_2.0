@@ -3,8 +3,8 @@ import { getUserDataFromSource, reducePlayerCount } from './module/players/playe
 import { eventRouter } from './router/event-router';
 import { messageRouter } from './router/message-router';
 import { setCache } from './utilities/redis-connection';
-import { getBetCount, getLobbiesMult } from './module/lobbies/lobby-event';
-import { currentRoundBets } from './module/bets/bets-session';
+import { getLobbiesMult, matchCountStats } from './module/lobbies/lobby-event';
+import { currentRoundBets, lobbyData } from './module/bets/bets-session';
 
 export const initSocket = (io: Server): void => {
   eventRouter(io);
@@ -33,13 +33,14 @@ export const initSocket = (io: Server): void => {
         id: userData.userId,
         operator_id: userData.operatorId,
         balance: userData.balance,
+        image: userData.image
       },
     );
 
     await setCache(`PL:${socket.id}`, JSON.stringify({ ...userData, socketId: socket.id }), 3600);
 
     messageRouter(io, socket);
-    socket.emit('betCount', getBetCount());
+    io.emit("betStats", { betCount: matchCountStats.betCount, totalBetAmount: matchCountStats.totalBetAmount, totalCashout: lobbyData.status == 1 ? matchCountStats.totalCashout : 0 });
     socket.emit('maxOdds', getLobbiesMult());
     currentRoundBets(socket);
 

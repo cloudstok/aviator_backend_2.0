@@ -4,20 +4,35 @@ import { getPlayerCount } from "../players/player-event";
 import { insertLobbies } from "./lobbies-db";
 import { createLogger } from "../../utilities/logger";
 import { read } from "../../utilities/db-connection";
-import { GeneratedOdds, LobbyData, LobbyHistory, OddsData } from "../../types";
+import { LobbyData, LobbyHistory, OddsData } from "../../types";
+import { LobbiesMult } from "../../interfaces";
+import { createRoundHashes, generateCrashMult } from "../game/game-logic";
+export let roundHashes: Record<string, string> = {};
 const logger = createLogger('Plane', 'jsonl');
 const planeErrorLogger = createLogger('PlaneError', 'plain');
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
-let lobbiesMult: string[] | undefined = [];
-let betCount: number = 0;
+let lobbiesMult: LobbiesMult[] | undefined = [];
 
 export function getLobbiesMult() { return lobbiesMult };
-export function getBetCount() { return betCount };
+
+export const matchCountStats: { betCount: number, totalBetAmount: number, totalCashout: number } = {
+    betCount: 0,
+    totalBetAmount: 0,
+    totalCashout: 0
+};
+
 function getRandomBetCount() {
-    betCount = Math.floor(Math.random() * (3000 - 600 + 1)) + 600;
-    return betCount
+    matchCountStats.betCount = Math.floor(Math.random() * (3000 - 600 + 1)) + 600;
+    matchCountStats.totalBetAmount = Math.floor(Math.random() * (50000 - 30000 + 1)) + 30000;
+    matchCountStats.totalCashout = Math.floor(Math.random() * (200000 - 100000 + 1)) + 100000;
 }
+
+function resetCountStats() {
+    matchCountStats.betCount = 0;
+    matchCountStats.totalBetAmount = 0;
+    matchCountStats.totalCashout = 0;
+};
 
 const checkPlaneHealth = (): NodeJS.Timeout => setInterval(() => {
     const { lobbyId, status } = getCurrentLobby() as LobbyData;
@@ -52,6 +67,13 @@ const initLobby = async (io: Server): Promise<void> => {
     const lobbyId = Date.now();
     let recurLobbyData: LobbyData = { lobbyId, status: 0, isWebhook: 0 };
     setCurrentLobby(recurLobbyData);
+    getRandomBetCount();
+
+    io.emit('betStats', {
+        betCount: matchCountStats.betCount,
+        totalBetAmount: matchCountStats.totalBetAmount,
+        totalCashout: 0
+    });
 
     io.emit('betCount', getRandomBetCount());
     io.emit('maxOdds', lobbiesMult);
@@ -63,7 +85,6 @@ const initLobby = async (io: Server): Promise<void> => {
     const end_delay = 6;
 
     odds.total_players = await getPlayerCount();
-    const max_mult = generateOdds().mult;
 
     for (let x = 0; x < start_delay; x++) {
         io.emit("plane", `${lobbyId}:${inc}:0`);
@@ -72,12 +93,15 @@ const initLobby = async (io: Server): Promise<void> => {
     }
 
     io.emit("plane", `${lobbyId}:PROCESSING:0`);
-    recurLobbyData.max_mult = max_mult;
     recurLobbyData.isWebhook = 1;
     setCurrentLobby(recurLobbyData);
-
     await settleCallBacks(io);
+    createRoundHashes();
+    const { serverSeed, hashedSeed, max_mult } = generateCrashMult();
     await sleep(3000);
+
+    recurLobbyData.max_mult = max_mult;
+    const hex = hashedSeed.slice(0, 13);
 
     let init_val = 1;
     recurLobbyData.status = 1;
@@ -109,6 +133,8 @@ const initLobby = async (io: Server): Promise<void> => {
 
     for (let y = 0; y < end_delay; y++) {
         if (y === 3) {
+            resetCountStats();
+            io.emit("betStats", matchCountStats);
             await settleBet(io, odds);
         }
         io.emit("plane", `${lobbyId}:${max_mult.toFixed(2)}:2`);
@@ -122,42 +148,32 @@ const initLobby = async (io: Server): Promise<void> => {
         lobbyId,
         start_delay,
         end_delay,
-        max_mult
+        max_mult,
+        hashedSeed,
+        serverSeed,
+        client_seeds: roundHashes
     };
 
-    io.emit("history", JSON.stringify(history));
+    io.emit("history", JSON.stringify({ ...history, hex, decimal: Number(BigInt('0x' + hex)) }));
     if (lobbiesMult && lobbiesMult?.length >= 30) lobbiesMult?.pop();
-    if (lobbiesMult) lobbiesMult = [Number(history.max_mult).toFixed(2), ...lobbiesMult];
+    if (lobbiesMult) lobbiesMult = [{ lobbyId, max_mult: history.max_mult.toFixed(2), created_at: history.time.toISOString(), client_seeds: history.client_seeds }, ...lobbiesMult];
+
     logger.info(JSON.stringify(history));
     await insertLobbies(history);
-
+    roundHashes = {};
     return initLobby(io);
+
 };
 
-export const getMaxMultOdds = async (): Promise<string[] | undefined> => {
+export const getMaxMultOdds = async (): Promise<LobbiesMult[] | undefined> => {
     try {
-        const odds = await read('SELECT max_mult from lobbies order by created_at desc limit 30');
-        const oddsData = odds.map(e => e.max_mult);
+        const odds = await read('SELECT lobby_id, max_mult, created_at, client_seeds, server_seed, hash from lobbies order by created_at desc limit 30');
+        const oddsData = odds.map(e => {
+            const hex = e.hash.slice(0, 13);
+            return { lobbyId: e.lobby_id, max_mult: e.max_mult, created_at: e.created_at, client_seeds: e.client_seeds, serverSeed: e.server_seed, hashedSeed: e.hash, hex, decimal: Number(BigInt('0x' + hex)) }
+        });
         return oddsData;
     } catch (err) {
         console.error(err);
     }
 };
-
-const RTP = 9700;
-
-function generateOdds(): GeneratedOdds {
-    const win_per = Math.random() * 99.00;
-    let mult = RTP / (win_per * 100);
-
-    if (mult < 1.01) {
-        mult = 1.00;
-    } else if (mult > 20) {
-        const highMultRng = Math.random();
-        if (highMultRng < 0.5) mult = generateOdds().mult;
-    } else if (mult > 100000) {
-        mult = 100000;
-    }
-
-    return { win_per, mult };
-}
