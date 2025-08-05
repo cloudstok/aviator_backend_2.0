@@ -52,7 +52,7 @@ export const getUserDataFromSource = async (
 };
 
 export const getPlayerCount = async (): Promise<number> => {
-  playerCount = Math.floor(Math.random() * 500) + 300; // Simulating player count for demonstration
+  playerCount = Math.floor(Math.random() * (3000 - 600 + 1)) + 600;
   return playerCount;
 };
 

@@ -12,6 +12,7 @@ import { insertBets, insertCashout, insertSettleBet } from './bets-db';
 import { sendToQueue } from '../../utilities/amqp';
 import { generateClientSeed } from '../game/game-logic';
 import { matchCountStats, roundHashes } from '../lobbies/lobby-event';
+import { inPlayUser } from '../../socket';
 
 const logger: Logger = createLogger('Bets', 'jsonl');
 const cashoutLogger: Logger = createLogger('Cashout', 'jsonl');
@@ -471,6 +472,8 @@ export const cashOut = async (
         const cleanSettlementObj = cleanData(betObj as Settlement, "cashout");
 
         matchCountStats.totalCashout += parseFloat(betObj.final_amount);
+        matchCountStats.betCount -= (Math.floor(Math.random() * 10) + 1);
+
         io.emit("betStats", matchCountStats);
         io.emit("cashout", cleanSettlementObj);
 
@@ -570,6 +573,13 @@ const createRoundStats = (roundData: RoundData, currentRoundSettlements: Settlem
 export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
 
     const userActiveBets = bets.filter(bet => bet.socket_id === socket.id && !bet.plane_status);
+    const cachedPlayerDetails = await getCache(`PL:${socket.id}`);
+    if (!cachedPlayerDetails) {
+        socket.emit('betError', 'Invalid Player Details');
+        return;
+    }
+    const parsedPlayerDetails: FinalUserData = JSON.parse(cachedPlayerDetails);
+    inPlayUser.delete(parsedPlayerDetails.id);
 
     if (userActiveBets.length > 0) {
         if (lobbyData.status === 1 && lobbyData.ongoingMaxMult) {
@@ -591,6 +601,7 @@ export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
             }));
         }
     };
+
     reducePlayerCount();
     setTimeout(async () => await deleteCache(`PL:${socket.id}`), 200);
 };

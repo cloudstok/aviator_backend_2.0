@@ -1,8 +1,12 @@
 export interface LobbiesMult {
     lobbyId: number;
-    max_mult: number | string;
+    round_max_mult: number | string;
     created_at: string;
     client_seeds: Record<string, string>;
+    serverSeed: string;
+    hashedSeed: string;
+    hex: string;
+    decimal: number;
 }
 
 export interface GameResult {
@@ -28,7 +32,6 @@ export interface RawUserData {
 };
 
 export interface FinalUserData extends RawUserData {
-    userId: string;
     id: string;
     game_id: string;
     token: string;

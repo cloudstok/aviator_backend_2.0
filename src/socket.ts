@@ -5,6 +5,7 @@ import { messageRouter } from './router/message-router';
 import { setCache } from './utilities/redis-connection';
 import { getLobbiesMult, matchCountStats } from './module/lobbies/lobby-event';
 import { currentRoundBets, lobbyData } from './module/bets/bets-session';
+export const inPlayUser: Map<string, string> = new Map();
 
 export const initSocket = (io: Server): void => {
   eventRouter(io);
@@ -17,12 +18,20 @@ export const initSocket = (io: Server): void => {
       socket.disconnect(true);
       console.log('Mandatory params missing', token);
       return;
-    }
+    };
+
 
     const userData = await getUserDataFromSource(token, game_id);
 
     if (!userData) {
       console.log('Invalid token', token);
+      socket.disconnect(true);
+      return;
+    };
+
+    const isUserConnected = inPlayUser.get(userData.id);
+    if (isUserConnected) {
+      socket.emit('betError', 'User already connected, disconnecting...');
       socket.disconnect(true);
       return;
     }
@@ -38,6 +47,7 @@ export const initSocket = (io: Server): void => {
     );
 
     await setCache(`PL:${socket.id}`, JSON.stringify({ ...userData, socketId: socket.id }), 3600);
+    inPlayUser.set(userData.id, token);
 
     messageRouter(io, socket);
     io.emit("betStats", { betCount: matchCountStats.betCount, totalBetAmount: matchCountStats.totalBetAmount, totalCashout: lobbyData.status == 1 ? matchCountStats.totalCashout : 0 });
