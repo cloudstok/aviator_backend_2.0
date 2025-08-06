@@ -1,5 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import { getUserDataFromSource, reducePlayerCount } from './module/players/player-event';
+import { getUserDataFromSource } from './module/players/player-event';
 import { eventRouter } from './router/event-router';
 import { messageRouter } from './router/message-router';
 import { setCache } from './utilities/redis-connection';
@@ -31,6 +31,7 @@ export const initSocket = (io: Server): void => {
 
     const isUserConnected = inPlayUser.get(userData.id);
     if (isUserConnected) {
+      console.log("already connected======");
       socket.emit('betError', 'User already connected, disconnecting...');
       socket.disconnect(true);
       return;

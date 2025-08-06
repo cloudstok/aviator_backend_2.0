@@ -6,10 +6,12 @@ import { createLogger } from "../../utilities/logger";
 import { read } from "../../utilities/db-connection";
 import { LobbyData, LobbyHistory, OddsData } from "../../types";
 import { LobbiesMult } from "../../interfaces";
-import { createRoundHashes, generateCrashMult } from "../game/game-logic";
+import { createRoundHashes, generateCrashMult, generateServerSeed } from "../game/game-logic";
+import { setCache } from "../../utilities/redis-connection";
 export let roundHashes: Record<string, string> = {};
 const logger = createLogger('Plane', 'jsonl');
 const planeErrorLogger = createLogger('PlaneError', 'plain');
+export let roundServerSeed = '';
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 let lobbiesMult: LobbiesMult[] | undefined = [];
@@ -57,9 +59,13 @@ const checkPlaneHealth = (): NodeJS.Timeout => setInterval(() => {
 export const initPlane = async (io: Server): Promise<void> => {
     logger.info("lobby started");
     initLobby(io);
+    updateServerSeed();
+    io.emit('rndSd', roundServerSeed);
     checkPlaneHealth();
     lobbiesMult = await getMaxMultOdds();
 };
+
+const updateServerSeed = () => roundServerSeed = generateServerSeed();
 
 let odds: OddsData = {};
 
@@ -75,7 +81,6 @@ const initLobby = async (io: Server): Promise<void> => {
         totalCashout: 0
     });
 
-    io.emit('betCount', getRandomBetCount());
     io.emit('maxOdds', lobbiesMult);
     odds.lobbyId = lobbyId;
     odds.start_time = Date.now();
@@ -99,6 +104,9 @@ const initLobby = async (io: Server): Promise<void> => {
     createRoundHashes();
     const { serverSeed, hashedSeed, max_mult } = generateCrashMult();
     await sleep(3000);
+
+    updateServerSeed();
+    io.emit('rndSd', roundServerSeed);
 
     if (max_mult > 1.03) {
         if (matchCountStats.betCount % 2 == 0) matchCountStats.betCount /= 2;

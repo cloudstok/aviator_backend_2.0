@@ -571,7 +571,7 @@ const createRoundStats = (roundData: RoundData, currentRoundSettlements: Settlem
 };
 
 export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
-
+    console.log("socket disconnected");
     const userActiveBets = bets.filter(bet => bet.socket_id === socket.id && !bet.plane_status);
     const cachedPlayerDetails = await getCache(`PL:${socket.id}`);
     if (!cachedPlayerDetails) {

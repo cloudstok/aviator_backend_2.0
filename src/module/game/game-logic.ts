@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { roundHashes } from '../lobbies/lobby-event';
+import { roundHashes, roundServerSeed } from '../lobbies/lobby-event';
 const randomAlpha = 'abcdefghijklmnopqrstuvwxyz';
 
-function generateServerSeed() {
+export function generateServerSeed() {
     return crypto.randomBytes(16).toString('hex');
 }
 
@@ -39,9 +39,10 @@ export const createRoundHashes = () => {
 export function generateCrashMult(): {
     serverSeed: string, hashedSeed: string, max_mult: number
 } {
-    const serverSeed = generateServerSeed();
+    const serverSeed = roundServerSeed;
     const combinedSeed = getCombinedSeed(serverSeed, Object.values(roundHashes));
     const hashedSeed = sha512(combinedSeed);
-    const max_mult = calculateCrashPoint(hashedSeed);
+    // const max_mult = calculateCrashPoint(hashedSeed);
+    const max_mult = 5;
     return { serverSeed, hashedSeed, max_mult }
 };
