@@ -31,7 +31,6 @@ export const initSocket = (io: Server): void => {
 
     const isUserConnected = inPlayUser.get(userData.id);
     if (isUserConnected) {
-      console.log("already connected======");
       socket.emit('betError', 'User already connected, disconnecting...');
       socket.disconnect(true);
       return;

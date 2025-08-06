@@ -275,7 +275,7 @@ const handleFulfilledResult = async (value: FulfilledBetResult, io: Server): Pro
             await insertBets(value);
         } else {
             io.to(socket_id).emit("bet", { bet_id: bet_id, action: "cancel" });
-            io.to(socket_id).emit("betError", `Bet Cancelled By Upstream ${bet_id}`);
+            io.to(socket_id).emit("betError", `bets cancelled by upstream ${bet_id}`);
             matchCountStats.betCount--;
             matchCountStats.totalBetAmount -= Number(originalBet.bet_amount) || 0;
             io.emit("betStats", { betCount: matchCountStats.betCount, totalBetAmount: matchCountStats.totalBetAmount, totalCashout: 0 });
