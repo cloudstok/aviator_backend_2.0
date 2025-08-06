@@ -100,7 +100,11 @@ const initLobby = async (io: Server): Promise<void> => {
     const { serverSeed, hashedSeed, max_mult } = generateCrashMult();
     await sleep(3000);
 
-    if (max_mult > 1.01) io.emit('betStats', matchCountStats);
+    if (max_mult > 1.03) {
+        if (matchCountStats.betCount % 2 == 0) matchCountStats.betCount /= 2;
+        else matchCountStats.betCount = matchCountStats.betCount = (matchCountStats.betCount / 2) + 0.5;
+        setTimeout(() => io.emit('betStats', matchCountStats), 300);
+    };
 
     recurLobbyData.max_mult = max_mult;
     const hex = hashedSeed.slice(0, 13);
