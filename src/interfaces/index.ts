@@ -8,14 +8,6 @@ export interface LobbiesMult {
     hex: string;
     decimal: number;
 }
-
-export interface GameResult {
-    jkr: string;
-    andr: string[];
-    bahar: string[];
-    winner: null | 1 | 2;
-}
-
 export type BetResult = {
     chip: number;
     betAmount: number;
@@ -112,13 +104,6 @@ export interface LobbiesData {
     status: number;
 };
 
-export type Suit = 'H' | 'D' | 'C' | 'S';
-export type Value = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
-
-export interface Card {
-    value: Value;
-    suit: Suit;
-}
 
 
 //==========New Interfaces

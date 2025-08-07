@@ -7,7 +7,6 @@ import { read } from "../../utilities/db-connection";
 import { LobbyData, LobbyHistory, OddsData } from "../../types";
 import { LobbiesMult } from "../../interfaces";
 import { createRoundHashes, generateCrashMult, generateServerSeed } from "../game/game-logic";
-import { setCache } from "../../utilities/redis-connection";
 export let roundHashes: Record<string, string> = {};
 const logger = createLogger('Plane', 'jsonl');
 const planeErrorLogger = createLogger('PlaneError', 'plain');
@@ -18,21 +17,24 @@ let lobbiesMult: LobbiesMult[] | undefined = [];
 
 export function getLobbiesMult() { return lobbiesMult };
 
-export const matchCountStats: { betCount: number, totalBetAmount: number, totalCashout: number } = {
+interface MatchStats {
+    betCount: number, pendBetCount: number, totalCashout: number
+}
+
+export const matchCountStats: MatchStats = {
     betCount: 0,
-    totalBetAmount: 0,
+    pendBetCount: 0,
     totalCashout: 0
 };
 
 function getRandomBetCount() {
     matchCountStats.betCount = Math.floor(Math.random() * (3000 - 600 + 1)) + 600;
-    matchCountStats.totalBetAmount = Math.floor(Math.random() * (50000 - 30000 + 1)) + 30000;
-    matchCountStats.totalCashout = Math.floor(Math.random() * (200000 - 100000 + 1)) + 100000;
+    matchCountStats.pendBetCount = matchCountStats.betCount;
 }
 
 function resetCountStats() {
     matchCountStats.betCount = 0;
-    matchCountStats.totalBetAmount = 0;
+    matchCountStats.pendBetCount = 0;
     matchCountStats.totalCashout = 0;
 };
 
@@ -69,17 +71,30 @@ const updateServerSeed = () => roundServerSeed = generateServerSeed();
 
 let odds: OddsData = {};
 
+function emitDecrementedStats(matchCountStats: MatchStats, pendBetCount: number, recurLobbyData: LobbyData, io: Server) {
+    function emitNext() {
+        if (matchCountStats.pendBetCount > pendBetCount && recurLobbyData.status === 1) {
+            matchCountStats.pendBetCount -= Math.floor(Math.random() * 25) + 1;
+
+            io.emit('betStats', {
+                ...matchCountStats,
+                pendBetCount: matchCountStats.pendBetCount
+            });
+
+            setTimeout(emitNext, 300);
+        }
+    }
+
+    emitNext();
+};
+
 const initLobby = async (io: Server): Promise<void> => {
     const lobbyId = Date.now();
     let recurLobbyData: LobbyData = { lobbyId, status: 0, isWebhook: 0 };
     setCurrentLobby(recurLobbyData);
     getRandomBetCount();
 
-    io.emit('betStats', {
-        betCount: matchCountStats.betCount,
-        totalBetAmount: matchCountStats.totalBetAmount,
-        totalCashout: 0
-    });
+    io.emit('betStats', matchCountStats);
 
     io.emit('maxOdds', lobbiesMult);
     odds.lobbyId = lobbyId;
@@ -111,18 +126,15 @@ const initLobby = async (io: Server): Promise<void> => {
     updateServerSeed();
     io.emit('rndSd', roundServerSeed);
 
-    if (max_mult > 1.03) {
-        if (matchCountStats.betCount % 2 == 0) matchCountStats.betCount /= 2;
-        else matchCountStats.betCount = matchCountStats.betCount = (matchCountStats.betCount / 2) + 0.5;
-        setTimeout(() => io.emit('betStats', matchCountStats), 300);
-    };
-
     recurLobbyData.max_mult = max_mult;
     const hex = hashedSeed.slice(0, 13);
 
     let init_val = 1;
     recurLobbyData.status = 1;
     setCurrentLobby(recurLobbyData);
+    const pendBetCount = Math.floor(Math.random() * 100) + 1;
+
+    emitDecrementedStats(matchCountStats, pendBetCount, recurLobbyData, io);
 
     do {
         io.emit("plane", `${lobbyId}:${init_val.toFixed(2)}:1`);
