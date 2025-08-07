@@ -98,12 +98,15 @@ const initLobby = async (io: Server): Promise<void> => {
     }
 
     io.emit("plane", `${lobbyId}:PROCESSING:0`);
+
     recurLobbyData.isWebhook = 1;
     setCurrentLobby(recurLobbyData);
+
     await settleCallBacks(io);
+    await sleep(3000);
+
     createRoundHashes();
     const { serverSeed, hashedSeed, max_mult } = generateCrashMult();
-    await sleep(3000);
 
     updateServerSeed();
     io.emit('rndSd', roundServerSeed);
@@ -168,9 +171,13 @@ const initLobby = async (io: Server): Promise<void> => {
         client_seeds: roundHashes
     };
 
-    io.emit("history", JSON.stringify(history));
+    const clientSeeds: { [key: string]: string } = {};
+    for (const seed in roundHashes) {
+        clientSeeds[`${seed[0]}***${seed.slice(-1)}`] = roundHashes[seed];
+    };
+
     if (lobbiesMult && lobbiesMult?.length >= 30) lobbiesMult?.pop();
-    if (lobbiesMult) lobbiesMult = [{ lobbyId, round_max_mult: history.max_mult.toFixed(2), created_at: history.time.toISOString(), client_seeds: history.client_seeds, hashedSeed, serverSeed, hex, decimal: Number(BigInt('0x' + hex)) }, ...lobbiesMult];
+    if (lobbiesMult) lobbiesMult = [{ lobbyId, round_max_mult: history.max_mult.toFixed(2), created_at: history.time.toISOString(), client_seeds: clientSeeds, hashedSeed, serverSeed, hex, decimal: Number(BigInt('0x' + hex)) }, ...lobbiesMult];
 
     logger.info(JSON.stringify(history));
     await insertLobbies(history);
@@ -183,8 +190,13 @@ export const getMaxMultOdds = async (): Promise<LobbiesMult[] | undefined> => {
     try {
         const odds = await read('SELECT lobby_id, max_mult, created_at, client_seeds, server_seed, hash from lobbies order by created_at desc limit 30');
         const oddsData = odds.map(e => {
-            const hex = e.hash.slice(0, 13);
-            return { lobbyId: e.lobby_id, round_max_mult: e.max_mult, created_at: e.created_at, client_seeds: e.client_seeds, serverSeed: e.server_seed, hashedSeed: e.hash, hex, decimal: Number(BigInt('0x' + hex)) }
+            const { hash, max_mult, created_at, client_seeds, server_seed, lobby_id } = e;
+            const hex = hash.slice(0, 13);
+            const clientSeeds: { [key: string]: string } = {};
+            for (const seed in client_seeds) {
+                clientSeeds[`${seed[0]}***${seed.slice(-1)}`] = client_seeds[seed];
+            }
+            return { lobbyId: lobby_id, round_max_mult: max_mult, created_at, client_seeds: clientSeeds, serverSeed: server_seed, hashedSeed: hash, hex, decimal: Number(BigInt('0x' + hex)) }
         });
         return oddsData;
     } catch (err) {
