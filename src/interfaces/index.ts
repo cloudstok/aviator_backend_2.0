@@ -1,5 +1,5 @@
 export interface LobbiesMult {
-    lobbyId: number;
+    lobby_id: number;
     round_max_mult: number | string;
     created_at: string;
     client_seeds: Record<string, string>;

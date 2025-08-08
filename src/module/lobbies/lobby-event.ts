@@ -189,7 +189,7 @@ const initLobby = async (io: Server): Promise<void> => {
     };
 
     if (lobbiesMult && lobbiesMult?.length >= 30) lobbiesMult?.pop();
-    if (lobbiesMult) lobbiesMult = [{ lobbyId, round_max_mult: history.max_mult.toFixed(2), created_at: history.time.toISOString(), client_seeds: clientSeeds, hashedSeed, serverSeed, hex, decimal: Number(BigInt('0x' + hex)) }, ...lobbiesMult];
+    if (lobbiesMult) lobbiesMult = [{ lobby_id: lobbyId, round_max_mult: history.max_mult.toFixed(2), created_at: history.time.toISOString(), client_seeds: clientSeeds, hashedSeed, serverSeed, hex, decimal: Number(BigInt('0x' + hex)) }, ...lobbiesMult];
 
     logger.info(JSON.stringify(history));
     await insertLobbies(history);
@@ -208,7 +208,7 @@ export const getMaxMultOdds = async (): Promise<LobbiesMult[] | undefined> => {
             for (const seed in client_seeds) {
                 clientSeeds[`${seed[0]}***${seed.slice(-1)}`] = client_seeds[seed];
             }
-            return { lobbyId: lobby_id, round_max_mult: max_mult, created_at, client_seeds: clientSeeds, serverSeed: server_seed, hashedSeed: hash, hex, decimal: Number(BigInt('0x' + hex)) }
+            return { lobby_id, round_max_mult: max_mult, created_at, client_seeds: clientSeeds, serverSeed: server_seed, hashedSeed: hash, hex, decimal: Number(BigInt('0x' + hex)) }
         });
         return oddsData;
     } catch (err) {
