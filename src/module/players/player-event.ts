@@ -46,7 +46,7 @@ export const getUserDataFromSource = async (
 
     return;
   } catch (err: any) {
-    console.error(err);
+    console.error(err.message);
     return false;
   }
 };
@@ -89,7 +89,7 @@ export const initPlayerBase = async (io: Server): Promise<void> => {
   try {
     io.emit("playerCount", `${playerCount}`);
     setTimeout(() => initPlayerBase(io), 1000);
-  } catch (err) {
-    console.error(err);
+  } catch (err: any) {
+    console.error(err.message);
   }
 };
