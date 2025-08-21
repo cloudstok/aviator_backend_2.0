@@ -3,7 +3,7 @@ import { RowDataPacket, ResultSetHeader, FieldPacket } from 'mysql2';
 import dotenv from 'dotenv';
 import { createLogger } from '../utilities/logger';
 import { appConfig } from './app-config';
-import { bets, lobbies, roundStats, settlement, user_messages } from '../db/tables';
+import { bets, lobbies, roundStats, settlement } from '../db/tables';
 
 dotenv.config();
 
@@ -99,7 +99,7 @@ export const createTables = async () => {
     try {
         if (!pool) throw new Error('Database pool is not initialized');
         const connection = await pool.getConnection();
-        await Promise.allSettled([connection.execute(lobbies), connection.execute(bets), connection.execute(settlement),  connection.execute(roundStats),  connection.execute(user_messages)]);
+        await Promise.allSettled([connection.execute(lobbies), connection.execute(bets), connection.execute(settlement), connection.execute(roundStats)]);
         logger.info(`Tables creation queries executed`)
     } catch (error) {
         console.error("Error creating tables", error);

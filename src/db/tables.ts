@@ -65,15 +65,3 @@ export const roundStats = ` CREATE TABLE IF NOT EXISTS round_stats (
    PRIMARY KEY USING BTREE (id),
    index idx_lobby (lobby_id) USING BTREE
  );`
-
-export const user_messages = `CREATE TABLE user_messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    operator_id varchar(255) DEFAULT NULL,
-    avatar INT not null,
-    name VARCHAR(255) default null,
-    msg TEXT,
-    gif varchar(255) DEFAULT null,
-    user_likes TEXT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);`
