@@ -12,7 +12,6 @@ import { insertBets, insertCashout, insertSettleBet } from './bets-db';
 import { sendToQueue } from '../../utilities/amqp';
 import { generateClientSeed } from '../game/game-logic';
 import { matchCountStats, roundHashes } from '../lobbies/lobby-event';
-import { inPlayUser } from '../../socket';
 
 const logger: Logger = createLogger('Bets', 'jsonl');
 const cashoutLogger: Logger = createLogger('Cashout', 'jsonl');
@@ -577,7 +576,7 @@ export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
         return;
     }
     const parsedPlayerDetails: FinalUserData = JSON.parse(cachedPlayerDetails);
-    inPlayUser.delete(parsedPlayerDetails.id);
+    // inPlayUser.delete(parsedPlayerDetails.id);
 
     if (userActiveBets.length > 0) {
         if (lobbyData.status === 1 && lobbyData.ongoingMaxMult) {
