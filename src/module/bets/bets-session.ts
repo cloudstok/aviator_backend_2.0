@@ -413,6 +413,10 @@ export const cashOut = async (
         betObj.atCo = Number(betObj.atCo);
         Object.assign(betObj, { lobby_id, bet_amount, user_id, operator_id });
 
+        if (betObj.atCo && atCo && betObj.atCo != atCo) {
+            return logEventAndEmitResponse(socket, CashObj, `Cheat: Invalid Cashout Multiplier. Setted Max Mult: ${betObj.atCo}, Received: ${atCo}`, 'cashout');
+        }
+
 
         let effective_max_mult: number;
         if ((betObj.atCo) && atCo && betObj.atCo === atCo && atCo <= Number(lobbyData.ongoingMaxMult)) {
@@ -576,7 +580,7 @@ export const disConnect = async (io: Server, socket: Socket): Promise<void> => {
         return;
     }
     const parsedPlayerDetails: FinalUserData = JSON.parse(cachedPlayerDetails);
-    // inPlayUser.delete(parsedPlayerDetails.id);
+    await deleteCache(parsedPlayerDetails.id);
 
     if (userActiveBets.length > 0) {
         if (lobbyData.status === 1 && lobbyData.ongoingMaxMult) {
