@@ -415,10 +415,10 @@ export const cashOut = async (
 
         if (betObj.atCo && atCo && betObj.atCo != atCo) {
             return logEventAndEmitResponse(socket, CashObj, `Cheat: Invalid Cashout Multiplier. Setted Max Mult: ${betObj.atCo}, Received: ${atCo}`, 'cashout');
-        }
-
+        };
 
         let effective_max_mult: number;
+
         if (max_mult && atCo && max_mult > atCo) effective_max_mult = atCo;
         else if ((betObj.atCo) && atCo && betObj.atCo === atCo && atCo <= Number(lobbyData.ongoingMaxMult)) {
             effective_max_mult = betObj.atCo;
@@ -428,13 +428,11 @@ export const cashOut = async (
 
         betObj.atCo = !atCo ? 0 : atCo;
 
-
         if (effective_max_mult > Number(lobbyData.ongoingMaxMult) || isNaN(Number(lobbyData.ongoingMaxMult))) {
             if (isAutoCashout) {
                 return logEventAndEmitResponse(socket, CashObj, `Cheat: Invalid Cashout Multiplier. Current: ${lobbyData.ongoingMaxMult}, Received: ${effective_max_mult}`, 'cashout');
             }
-        }
-
+        };
 
         betObj.max_mult = Number(effective_max_mult).toFixed(2);
         betObj.plane_status = "cashout";

@@ -16,8 +16,7 @@ function getCombinedSeed(serverSeed: string, clientSeeds: any[]) {
 
 function sha512(input: crypto.BinaryLike) {
     return crypto.createHash('sha512').update(input).digest('hex');
-}
-
+};
 
 function calculateCrashPoint(hash: string): number {
     const h = BigInt('0x' + hash.slice(0, 13));
@@ -25,7 +24,7 @@ function calculateCrashPoint(hash: string): number {
     const e = BigInt(2) ** BigInt(52);
     const result = (BigInt(100) * e) / (h + 1n);
     return Number(result) / 100;
-}
+};
 
 export const createRoundHashes = () => {
     let totalUserSeeds = Object.values(roundHashes).length;

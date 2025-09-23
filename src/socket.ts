@@ -29,6 +29,7 @@ export const initSocket = (io: Server): void => {
     };
 
     const exSid = await getCache(userData.id);
+
     if (exSid) {
       const socket = io.sockets.sockets.get(exSid);
       if (socket) {
@@ -36,7 +37,6 @@ export const initSocket = (io: Server): void => {
         socket.disconnect(true);
       }
     };
-
 
     socket.emit('info',
       {
